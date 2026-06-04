@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Репетитор — аудио, д/з, статистика тестов</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="window._katexReady=true"></script>
+<style>
+  :root {
+    --bg: #f7f6f3;
+    --bg2: #ffffff;
+    --border: #e0ddd5;
+    --text: #1a1a1a;
+    --text2: #555;
+    --text3: #888;
+    --accent: #3b5bdb;
+    --accent-bg: #eef2ff;
+    --green: #2f9e44;
+    --green-bg: #ebfbee;
+    --red: #c92a2a;
+    --red-bg: #fff5f5;
+    --yellow-bg: #fff9db;
+    --yellow: #e67700;
+    --shadow: 0 1px 4px rgba(0,0,0,0.08);
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  input, textarea, select, button { font-family: inherit; }
+
+  /* AUTH SCREEN */
+  #auth-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 2rem; }
+  .auth-box { background: var(--bg2); border-radius: var(--radius); padding: 2.5rem; width: 100%; max-width: 360px; box-shadow: var(--shadow); border: 1px solid var(--border); }
+  .auth-box h1 { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .auth-box p { font-size: 0.85rem; color: var(--text2); margin-bottom: 1.5rem; }
+  .auth-tabs { display: flex; gap: 8px; margin-bottom: 1.5rem; }
+  .tab-btn { flex: 1; padding: 8px; border: 1px solid var(--border); background: transparent; border-radius: 8px; font-size: 0.85rem; cursor: pointer; color: var(--text2); }
+  .tab-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+  .field { margin-bottom: 1rem; }
+  .field label { display: block; font-size: 0.8rem; font-weight: 500; color: var(--text2); margin-bottom: 5px; }
+  .field input, .field select { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; background: var(--bg2); color: var(--text); }
+  .field input:focus, .field select:focus { outline: none; border-color: var(--accent); }
+  .btn-primary { width: 100%; padding: 10px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 0.9rem; font-weight: 500; cursor: pointer; }
+  .error-msg { color: var(--red); font-size: 0.82rem; margin-top: 0.75rem; text-align: center; }
+
+  /* MAIN */
+  #app { display: none; min-height: 100vh; }
+  .topbar { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 0 1.5rem; height: 52px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+  .topbar-left { display: flex; align-items: center; gap: 12px; }
+  .topbar h2 { font-size: 0.95rem; font-weight: 600; }
+  .topbar-role { font-size: 0.75rem; padding: 3px 9px; border-radius: 20px; font-weight: 500; }
+  .role-tutor { background: var(--accent-bg); color: var(--accent); }
+  .role-student { background: var(--green-bg); color: var(--green); }
+  .btn-sm { padding: 6px 14px; border: 1px solid var(--border); background: transparent; border-radius: 7px; font-size: 0.82rem; cursor: pointer; color: var(--text2); }
+  .btn-sm:hover { background: var(--bg); }
+  .btn-danger-sm { border-color: #ffc9c9; color: var(--red); }
+
+  /* TUTOR PANEL */
+  #tutor-panel { display: none; }
+  .tutor-layout { display: grid; grid-template-columns: 260px 1fr; min-height: calc(100vh - 52px); }
+  .sidebar { background: var(--bg2); border-right: 1px solid var(--border); padding: 1.25rem 1rem; overflow-y: auto; max-height: calc(100vh - 52px); }
+  .sidebar h3 { font-size: 0.78rem; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.75rem; margin-bottom: 0.75rem; }
+  .student-item { padding: 9px 12px; border-radius: 8px; cursor: pointer; margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between; border: 1px solid transparent; }
+  .student-item:hover { background: var(--bg); border-color: var(--border); }
+  .student-item.active { background: var(--accent-bg); border-color: #c5d0ff; }
+  .student-item .sname { font-size: 0.875rem; font-weight: 500; }
+  .del-btn { font-size: 0.75rem; color: var(--text3); cursor: pointer; opacity: 0; }
+  .student-item:hover .del-btn { opacity: 1; }
+  .del-btn:hover { background: var(--red-bg); color: var(--red); border-radius: 4px; }
+  .add-student-form { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+  .add-student-form input { width: 100%; padding: 7px 10px; border: 1px solid var(--border); border-radius: 7px; margin-bottom: 6px; background: var(--bg2); }
+  .btn-add { width: 100%; padding: 8px; background: var(--accent); color: white; border: none; border-radius: 7px; cursor: pointer; font-weight: 500; }
+
+  .editor-area { padding: 1.5rem; background: var(--bg); overflow-y: auto; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 1rem; }
+  .tool-btn { padding: 7px 12px; border: 1px solid var(--border); background: var(--bg2); border-radius: 7px; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+  .tool-btn:hover { background: var(--bg); }
+  .blocks-list { display: flex; flex-direction: column; gap: 10px; }
+  .block { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; }
+  .block-handle { display: flex; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--border); }
+  .block-type-label { font-size: 0.72rem; font-weight: 600; color: var(--text3); text-transform: uppercase; }
+  .block-actions { display: flex; gap: 6px; }
+  .bact-btn { font-size: 0.75rem; padding: 3px 8px; border-radius: 5px; cursor: pointer; background: transparent; border: 1px solid var(--border); }
+  .bact-btn.remove { color: var(--red); border-color: #ffc9c9; }
+  .block-content { padding: 14px; }
+  .block-content textarea, .block-content input { width: 100%; border: 1px solid var(--border); border-radius: 7px; padding: 9px 11px; font-size: 0.88rem; background: var(--bg); }
+  .save-btn { padding: 9px 20px; background: var(--green); color: white; border: none; border-radius: 8px; cursor: pointer; }
+  .saved-notice { font-size: 0.8rem; color: var(--green); margin-left: 10px; opacity: 0; transition: 0.2s; }
+  .saved-notice.show { opacity: 1; }
+
+  /* STUDENT PANEL */
+  #student-panel { display: none; }
+  .student-view { max-width: 800px; margin: 0 auto; padding: 2rem 1.5rem; }
+  .student-tabs { display: flex; gap: 12px; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
+  .student-tab { background: none; border: none; font-size: 1rem; padding: 6px 0; cursor: pointer; color: var(--text2); border-bottom: 2px solid transparent; }
+  .student-tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+  .view-block { margin-bottom: 1.5rem; }
+  .audio-player { width: 100%; margin: 0.5rem 0; }
+  .homework-table { width: 100%; border-collapse: collapse; background: var(--bg2); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow); }
+  .homework-table th, .homework-table td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
+  .homework-table th { background: var(--bg); font-weight: 600; color: var(--text2); }
+  .homework-status { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 500; }
+  .status-done { background: var(--green-bg); color: var(--green); }
+  .status-overdue { background: var(--red-bg); color: var(--red); }
+  .status-pending { background: var(--yellow-bg); color: var(--yellow); }
+  .quiz-stats-card { background: var(--bg2); border-radius: 10px; padding: 12px; margin-top: 12px; border: 1px solid var(--border); }
+  .stat-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed var(--border); }
+  .tutor-stats-area { margin-top: 1rem; padding: 0.5rem; background: var(--bg2); border-radius: 8px; border: 1px solid var(--border); }
+  /* Модалка */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; display: flex; align-items: center; justify-content: center; }
+  .modal { background: var(--bg2); border-radius: var(--radius); padding: 1.75rem; max-width: 460px; width: 90%; }
+  @media (max-width: 640px) { .tutor-layout { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<div id="auth-screen"><div class="auth-box">
+  <h1>📐 Репетитор</h1><p>Аудио + Д/з + Статистика</p>
+  <div class="auth-tabs"><button class="tab-btn active" onclick="setAuthTab('tutor')">Репетитор</button><button class="tab-btn" onclick="setAuthTab('student')">Ученик</button></div>
+  <div id="tab-tutor"><div class="field"><label>Мастер-пароль</label><input type="password" id="tutor-pass" placeholder="tutor123"></div><button class="btn-primary" onclick="loginTutor()">Войти</button></div>
+  <div id="tab-student" style="display:none"><div class="field"><label>Логин</label><input type="text" id="stu-login"></div><div class="field"><label>Пароль</label><input type="password" id="stu-pass"></div><button class="btn-primary" onclick="loginStudent()">Войти</button></div>
+  <div id="auth-error" class="error-msg"></div>
+</div></div>
+
+<div id="app">
+  <div class="topbar"><div class="topbar-left"><h2>📐 Репетитор+</h2><span id="topbar-role" class="topbar-role">Репетитор</span></div><div><button class="btn-sm" onclick="openGitHubModal()">⚙ GitHub</button><button class="btn-sm btn-danger-sm" onclick="logout()">Выйти</button></div></div>
+  <div id="tutor-panel"><div class="tutor-layout"><div class="sidebar">
+    <h3>Ученики</h3><div id="students-list"></div>
+    <div class="add-student-form"><input type="text" id="new-name" placeholder="Имя"><input type="text" id="new-login" placeholder="Логин"><input type="password" id="new-password" placeholder="Пароль"><button class="btn-add" onclick="addStudent()">+ Добавить</button></div>
+  </div><div class="editor-area" id="editor-area">
+    <div class="editor-empty" id="editor-empty">← Выберите ученика</div>
+    <div id="editor-content" style="display:none"><div class="editor-header"><h2 id="editor-student-name"></h2><div><button class="save-btn" onclick="savePage()">💾 Сохранить</button><span class="saved-notice" id="saved-notice">Сохранено</span></div></div>
+    <div class="toolbar">
+      <button class="tool-btn" onclick="addBlock('heading')">📝 Заголовок</button><button class="tool-btn" onclick="addBlock('text')">✏️ Текст</button>
+      <button class="tool-btn" onclick="addBlock('formula')">∑ Формула</button><button class="tool-btn" onclick="addBlock('image')">🖼 Картинка</button>
+      <button class="tool-btn" onclick="addBlock('video')">▶ Видео</button><button class="tool-btn" onclick="addBlock('audio')">🎵 Аудио</button>
+      <button class="tool-btn" onclick="addBlock('quiz')">❓ Тест</button><button class="tool-btn" onclick="addBlock('callout')">💡 Заметка</button>
+      <button class="tool-btn" onclick="addBlock('divider')">— Разделитель</button><button class="tool-btn" onclick="addBlock('file')">📎 Файл</button>
+    </div>
+    <div class="blocks-list" id="blocks-list"></div>
+    <div id="tutor-stats-area" style="margin-top:20px; padding:12px; background:var(--bg2); border-radius:10px; border:1px solid var(--border);"><h4>📊 Статистика тестов ученика</h4><div id="tutor-quiz-stats"></div></div>
+    </div></div></div></div>
+  <div id="student-panel"><div class="student-view">
+    <div class="student-tabs"><button class="student-tab active" data-tab="materials">📖 Материалы</button><button class="student-tab" data-tab="homework">📋 Домашние задания</button><button class="student-tab" data-tab="stats">📈 Мои результаты</button></div>
+    <div id="student-materials" style="display:block"></div><div id="student-homework" style="display:none"></div><div id="student-stats" style="display:none"></div>
+  </div></div>
+</div>
+<div id="github-modal" style="display:none" class="modal-overlay"><div class="modal"><h3>GitHub Sync</h3><div class="field"><label>Username</label><input id="gh-user"></div><div class="field"><label>Repo</label><input id="gh-repo"></div><div class="field"><label>Token</label><input id="gh-token" type="password"></div><div class="modal-actions" style="display:flex;gap:10px; justify-content:flex-end; margin-top:1rem"><button class="btn-sm" onclick="closeGithubModal()">Отмена</button><button class="btn-primary" onclick="saveGitHubConfig()">Сохранить</button></div></div></div>
+
+<script>
+const MASTER_PASS = 'tutor123';
+const STORAGE_KEY = 'tutor_data';
+let currentRole = null, currentStudent = null, currentEditLogin = null;
+let quizSelections = {};
+
+// ---------- DATA MODEL ----------
+function getData() {
+  const d = localStorage.getItem(STORAGE_KEY);
+  if (d) return JSON.parse(d);
+  const init = { students: [
+    { name: 'Иванова Аня', login: 'anya', password: 'math1', blocks: [{ id: 'b1', type: 'heading', data: { text: 'Квадратные уравнения', level: 'h2' } },{ id: 'b2', type: 'audio', data: { url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3', caption: 'Лекция: Дискриминант' } }], homework: [], quizResults: {} },
+    { name: 'Петров Коля', login: 'kolya', password: 'geom2', blocks: [], homework: [], quizResults: {} }
+  ]};
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(init));
+  return init;
+}
+function setData(data) { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+
+// AUTH
+function setAuthTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active', (i===0&&tab==='tutor')||(i===1&&tab==='student')));
+  document.getElementById('tab-tutor').style.display = tab==='tutor'?'block':'none';
+  document.getElementById('tab-student').style.display = tab==='student'?'block':'none';
+}
+function loginTutor() { if(document.getElementById('tutor-pass').value !== MASTER_PASS) { document.getElementById('auth-error').textContent='Неверный пароль'; return; }
+  currentRole='tutor'; document.getElementById('topbar-role').textContent='🎓 Репетитор'; document.getElementById('topbar-role').className='topbar-role role-tutor';
+  showApp('tutor'); renderSidebar(); closeEditor(); }
+function loginStudent() { let login=document.getElementById('stu-login').value.trim().toLowerCase(), pass=document.getElementById('stu-pass').value;
+  const data=getData(); let stu=data.students.find(s=>s.login===login && s.password===pass);
+  if(!stu){ document.getElementById('auth-error').textContent='Неверно'; return; }
+  currentRole='student'; currentStudent=stu; document.getElementById('topbar-role').textContent='📚 '+stu.name; document.getElementById('topbar-role').className='topbar-role role-student';
+  showApp('student'); renderStudentView(); }
+function showApp(role) { document.getElementById('auth-screen').style.display='none'; document.getElementById('app').style.display='block';
+  document.getElementById('tutor-panel').style.display=role==='tutor'?'block':'none'; document.getElementById('student-panel').style.display=role==='student'?'block':'none';
+  if(role==='student') renderStudentView(); }
+function logout() { currentRole=null; currentStudent=null; currentEditLogin=null; document.getElementById('auth-screen').style.display='flex'; document.getElementById('app').style.display='none'; }
+
+// SIDEBAR TUTOR
+function renderSidebar() { let data=getData(); let list=document.getElementById('students-list'); list.innerHTML='';
+  data.students.forEach(stu=>{ let div=document.createElement('div'); div.className='student-item'+(currentEditLogin===stu.login?' active':'');
+    div.innerHTML=`<div><div class="sname">${esc(stu.name)}</div><div class="slogin">@${esc(stu.login)}</div></div><span class="del-btn" onclick="deleteStudent('${stu.login}',event)">✕</span>`;
+    div.onclick=(e)=>{ if(!e.target.classList.contains('del-btn')) openEditor(stu.login); }; list.appendChild(div); });
+}
+function deleteStudent(login,e){ e.stopPropagation(); if(!confirm('Удалить?')) return; let data=getData(); data.students=data.students.filter(s=>s.login!==login); setData(data); if(currentEditLogin===login) closeEditor(); renderSidebar(); }
+function addStudent(){ let name=document.getElementById('new-name').value.trim(),login=document.getElementById('new-login').value.trim().toLowerCase(),pass=document.getElementById('new-password').value.trim();
+  if(!name||!login||!pass){ alert('Заполните'); return; } let data=getData(); if(data.students.find(s=>s.login===login)){ alert('Логин есть'); return; }
+  data.students.push({name,login,password:pass,blocks:[],homework:[],quizResults:{}}); setData(data); document.getElementById('new-name').value=''; document.getElementById('new-login').value=''; document.getElementById('new-password').value=''; renderSidebar(); openEditor(login); }
+function openEditor(login){ currentEditLogin=login; let data=getData(); let stu=data.students.find(s=>s.login===login); document.getElementById('editor-empty').style.display='none'; document.getElementById('editor-content').style.display='block';
+  document.getElementById('editor-student-name').innerHTML='📄 '+stu.name; renderBlocks(stu.blocks||[]); renderTutorQuizStats(stu); renderSidebar(); }
+function closeEditor(){ document.getElementById('editor-empty').style.display='flex'; document.getElementById('editor-content').style.display='none'; renderSidebar(); }
+function renderBlocks(blocks){ let list=document.getElementById('blocks-list'); list.innerHTML=''; blocks.forEach((b,i)=>list.appendChild(createBlockEl(b,i,blocks.length))); renderAllFormulas(); }
+function createBlockEl(block,idx,total){ let div=document.createElement('div'); div.className='block'; div.dataset.id=block.id; let typeNames={heading:'Заголовок',text:'Текст',formula:'Формула',image:'Картинка',video:'Видео',audio:'Аудио',quiz:'Тест',callout:'Заметка',divider:'Разделитель',file:'Файл'};
+  let content='';
+  if(block.type==='heading') content=`<div class="block-content"><select onchange="updateBlock('${block.id}','level',this.value)"><option value="h1" ${block.data.level==='h1'?'selected':''}>H1</option><option value="h2" ${block.data.level==='h2'?'selected':''}>H2</option><option value="h3" ${block.data.level==='h3'?'selected':''}>H3</option></select><input type="text" value="${esc(block.data.text||'')}" oninput="updateBlock('${block.id}','text',this.value)"></div>`;
+  else if(block.type==='text') content=`<div class="block-content"><textarea oninput="updateBlock('${block.id}','text',this.value)">${esc(block.data.text||'')}</textarea></div>`;
+  else if(block.type==='formula') content=`<div class="block-content"><input type="text" value="${esc(block.data.tex||'')}" oninput="updateBlock('${block.id}','tex',this.value);renderFormulaPreview(this,'fp-${block.id}')"><div id="fp-${block.id}" class="formula-preview"></div></div>`;
+  else if(block.type==='image') content=`<div class="block-content"><input type="text" value="${esc(block.data.url||'')}" placeholder="URL" oninput="updateBlock('${block.id}','url',this.value)"><input type="file" accept="image/*" onchange="loadImage(event,'${block.id}')"><input type="text" placeholder="Подпись" value="${esc(block.data.caption||'')}" oninput="updateBlock('${block.id}','caption',this.value)"></div>`;
+  else if(block.type==='video') content=`<div class="block-content"><input type="text" value="${esc(block.data.url||'')}" placeholder="YouTube URL" oninput="updateBlock('${block.id}','url',this.value)"><input type="text" value="${esc(block.data.caption||'')}" placeholder="Подпись" oninput="updateBlock('${block.id}','caption',this.value)"></div>`;
+  else if(block.type==='audio') content=`<div class="block-content"><input type="text" value="${esc(block.data.url||'')}" placeholder="Ссылка на MP3/OGG" oninput="updateBlock('${block.id}','url',this.value)"><input type="text" value="${esc(block.data.caption||'')}" placeholder="Название/подпись" oninput="updateBlock('${block.id}','caption',this.value)"><audio controls style="width:100%; margin-top:8px;" src="${esc(block.data.url||'')}"></audio></div>`;
+  else if(block.type==='quiz') { let opts=block.data.options||[]; let correct=block.data.correct||0; let optsHtml=opts.map((o,oi)=>`<div><input type="radio" name="q-${block.id}" ${oi===correct?'checked':''} onchange="updateBlock('${block.id}','correct',${oi})"><input type="text" value="${esc(o)}" oninput="updateOption('${block.id}',${oi},this.value)"><button onclick="removeOption('${block.id}',${oi})">✕</button></div>`).join(''); content=`<div class="block-content"><input type="text" placeholder="Вопрос" value="${esc(block.data.question||'')}" oninput="updateBlock('${block.id}','question',this.value)">${optsHtml}<button onclick="addOption('${block.id}')">+ вариант</button><input type="text" placeholder="Подсказка" value="${esc(block.data.hint||'')}" oninput="updateBlock('${block.id}','hint',this.value)"></div>`; }
+  else if(block.type==='callout') content=`<div class="block-content"><textarea oninput="updateBlock('${block.id}','text',this.value)">${esc(block.data.text||'')}</textarea></div>`;
+  else if(block.type==='divider') content=`<div class="block-content">——— разделитель ———</div>`;
+  else if(block.type==='file') content=`<div class="block-content"><input type="text" value="${esc(block.data.url||'')}" placeholder="URL" oninput="updateBlock('${block.id}','url',this.value)"><input type="text" value="${esc(block.data.label||'Скачать')}" oninput="updateBlock('${block.id}','label',this.value)"></div>`;
+  div.innerHTML = `<div class="block-handle"><span class="block-type-label">${typeNames[block.type]}</span><div class="block-actions">${idx>0?`<button class="move-btn" onclick="moveBlock('${block.id}',-1)">↑</button>`:''}${idx<total-1?`<button class="move-btn" onclick="moveBlock('${block.id}',1)">↓</button>`:''}<button class="bact-btn remove" onclick="removeBlock('${block.id}')">Удалить</button></div></div>${content}`;
+  return div;
+}
+function addBlock(type){ if(!currentEditLogin) return; let data=getData(); let stu=data.students.find(s=>s.login===currentEditLogin); let id='b'+Date.now()+Math.random(); let defaults={heading:{level:'h2',text:''},text:{text:''},formula:{tex:''},image:{url:'',caption:''},video:{url:'',caption:''},audio:{url:'',caption:''},quiz:{question:'',options:['','',''],correct:0,hint:''},callout:{text:''},divider:{},file:{url:'',label:'Скачать'}}; stu.blocks.push({id,type,data:defaults[type]||{}}); setData(data); renderBlocks(stu.blocks); }
+function removeBlock(id){ let data=getData(); let stu=data.students.find(s=>s.login===currentEditLogin); stu.blocks=stu.blocks.filter(b=>b.id!==id); setData(data); renderBlocks(stu.blocks); }
+function moveBlock(id,dir){ let data=getData(); let stu=data.students.find(s=>s.login===currentEditLogin); let idx=stu.blocks.findIndex(b=>b.id===id); let newIdx=idx+dir; if(newIdx<0||newIdx>=stu.blocks.length) return; [stu.blocks[idx],stu.blocks[newIdx]]=[stu.blocks[newIdx],stu.blocks[idx]]; setData(data); renderBlocks(stu.blocks); }
+function updateBlock(id,key,val){ let data=getData(); let stu=data.students.find(s=>s.login===currentEditLogin); let block=stu.blocks.find(b=>b.id===id); if(block) block.data[key]=val; setData(data); }
+function updateOption(bid,idx,val){ let data=getData(); let stu=data.students.find(s=>s.login===currentEditLogin); let block=stu.blocks.find(b=>b.id===bid); if(block) block.data.options[idx]=val; setData(data); }
+function addOption(bid){ let data=getData(); let stu=data.students.find(s=>s.login===currentEditLogin); let block=stu.blocks.find(b=>b.id===bid); if(block && block.data.options.length<6) block.data.options.push(''); setData(data); renderBlocks(stu.blocks); }
+function removeOption(bid,idx){ let data=getData(); let stu=data.students.find(s=>s.login===currentEditLogin); let block=stu.blocks.find(b=>b.id===bid); if(block && block.data.options.length>2){ block.data.options.splice(idx,1); if(block.data.correct>=block.data.options.length) block.data.correct=0; } setData(data); renderBlocks(stu.blocks); }
+function loadImage(event,bid){ let file=event.target.files[0]; if(!file) return; let reader=new FileReader(); reader.onload=e=>{ let data=getData(); let stu=data.students.find(s=>s.login===currentEditLogin); let block=stu.blocks.find(b=>b.id===bid); if(block) block.data.url=e.target.result; setData(data); renderBlocks(stu.blocks); }; reader.readAsDataURL(file); }
+function renderFormulaPreview(inp,preId){ if(!window.katex) return; let preview=document.getElementById(preId); if(preview) try{ preview.innerHTML=''; window.katex.render(inp.value,preview,{displayMode:true,throwOnError:false}); }catch(e){} }
+function renderAllFormulas(){ if(!window.katex){ setTimeout(renderAllFormulas,300); return; } document.querySelectorAll('[id^="fp-"]').forEach(el=>{ let prev=el.previousElementSibling; if(prev&&prev.value) try{ el.innerHTML=''; window.katex.render(prev.value,el,{displayMode:true}); }catch(e){} }); }
+function savePage(){ let notice=document.getElementById('saved-notice'); notice.classList.add('show'); setTimeout(()=>notice.classList.remove('show'),1500); let gh=getGH(); if(gh) syncToGitHub(gh,getData()); }
+
+// ----- Статистика тестов (сохранение результатов) -----
+function recordQuizAttempt(studentLogin, quizId, isCorrect, hint){
+  let data=getData(); let stu=data.students.find(s=>s.login===studentLogin); if(!stu) return; if(!stu.quizResults) stu.quizResults={}; if(!stu.quizResults[quizId]) stu.quizResults[quizId]={attempts:0,correct:0,lastHint:hint||''};
+  stu.quizResults[quizId].attempts++; if(isCorrect) stu.quizResults[quizId].correct++; setData(data);
+  if(currentRole==='tutor' && currentEditLogin===studentLogin) renderTutorQuizStats(stu);
+}
+function renderTutorQuizStats(stu){ let container=document.getElementById('tutor-quiz-stats'); if(!container) return; let stats=stu.quizResults||{}; if(Object.keys(stats).length===0){ container.innerHTML='<p style="color:var(--text3)">Нет попыток тестов</p>'; return; }
+  let html='<div style="max-height:200px; overflow-y:auto">'; for(let qid in stats){ let s=stats[qid]; let percent=s.attempts?Math.round(s.correct/s.attempts*100):0; html+=`<div class="stat-row"><span>📋 ${qid.slice(0,12)}...</span><span>Попыток: ${s.attempts} | ✅ ${s.correct} | ${percent}% верных</span></div>`; } html+='</div>'; container.innerHTML=html; }
+
+// ----- STUDENT VIEW (материалы+домашние задания+статистика)-----
+function renderStudentView(){ let stu=currentStudent; if(!stu) return; document.getElementById('student-materials').innerHTML=''; document.getElementById('student-homework').innerHTML=''; document.getElementById('student-stats').innerHTML='';
+  // материалы
+  (stu.blocks||[]).forEach(b=>document.getElementById('student-materials').appendChild(createStudentBlock(b)));
+  // домашние задания (если есть массив homework)
+  let hwArr=stu.homework||[];
+  let hwHtml=`<table class="homework-table"><thead><tr><th>Задание</th><th>Дедлайн</th><th>Статус</th><th></th></tr></thead><tbody>`;
+  if(hwArr.length===0) hwHtml='<p>Нет домашних заданий.</p>';
+  else hwArr.forEach(h=>{ let statusClass='status-pending', statusText='Не сдано'; let now=new Date(); let deadline=new Date(h.deadline); if(h.completed) { statusClass='status-done'; statusText='✅ Сдано'; } else if(deadline<now) { statusClass='status-overdue'; statusText='⏰ Просрочено'; }
+    hwHtml+=`<tr><td>${esc(h.title)}</td><td>${esc(h.deadline)}</td><td><span class="homework-status ${statusClass}">${statusText}</span></td><td>${!h.completed?`<button class="btn-sm" onclick="markHomeworkDone('${h.id}')">Сдать</button>`:'✔️'}</td></tr>`; });
+  hwHtml+=`</tbody></table><div style="margin-top:12px;"><input type="text" id="newHwTitle" placeholder="Название задания" style="padding:6px; margin-right:6px;"><input type="datetime-local" id="newHwDeadline"><button class="btn-sm" onclick="addHomework()">+ Добавить задание (только репетитор)</button><div class="hint" style="font-size:0.7rem; color:var(--text3)">Ученик видит задания, может отметить "Сдать". Репетитор добавляет.</div></div>`;
+  document.getElementById('student-homework').innerHTML=hwHtml;
+  // Моя статистика по тестам
+  let quizRes=stu.quizResults||{};
+  let statsHtml='<h3>📊 Статистика по тестам</h3>';
+  if(Object.keys(quizRes).length===0) statsHtml+='<p>Вы пока не отвечали на тесты.</p>';
+  else for(let qid in quizRes){ let s=quizRes[qid]; let percent=s.attempts?Math.round(s.correct/s.attempts*100):0; statsHtml+=`<div class="quiz-stats-card"><b>${qid}</b><div>Попыток: ${s.attempts}, Правильно: ${s.correct} (${percent}%)</div></div>`; }
+  document.getElementById('student-stats').innerHTML=statsHtml;
+  if(window.katex && window.renderMathInElement) setTimeout(()=>renderMathInElement(document.getElementById('student-materials'),{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false}),100);
+}
+function createStudentBlock(block){ let div=document.createElement('div'); div.className='view-block';
+  if(block.type==='heading'){ let tag=block.data.level||'h2'; div.innerHTML=`<${tag}>${esc(block.data.text||'')}</${tag}>`; }
+  else if(block.type==='text') div.innerHTML=`<p>${(block.data.text||'').replace(/\n/g,'<br>')}</p>`;
+  else if(block.type==='formula') div.innerHTML=`<div class="formula-display" data-tex="${esc(block.data.tex||'')}"></div>`;
+  else if(block.type==='image' && block.data.url) div.innerHTML=`<img src="${block.data.url}" style="max-width:100%;border-radius:8px;"><p class="img-caption">${esc(block.data.caption||'')}</p>`;
+  else if(block.type==='video'){ let vid=ytId(block.data.url); if(vid) div.innerHTML=`<div class="video-wrap"><iframe src="https://www.youtube.com/embed/${vid}" frameborder="0" allowfullscreen></iframe></div><p>${esc(block.data.caption||'')}</p>`; }
+  else if(block.type==='audio' && block.data.url){ div.innerHTML=`<audio controls class="audio-player" src="${esc(block.data.url)}"></audio><p>${esc(block.data.caption||'')}</p>`; }
+  else if(block.type==='quiz'){ let qid='quiz-'+block.id, opts=block.data.options||[]; let optsHtml=opts.map((o,i)=>`<div class="quiz-opt" id="${qid}-opt-${i}" onclick="selectQuizOpt('${qid}',${i})">${esc(o||'Вариант')}</div>`).join('');
+    div.innerHTML=`<div class="quiz-card" id="${qid}"><div class="question">${esc(block.data.question||'Вопрос')}</div>${optsHtml}<button class="quiz-check-btn" onclick="checkQuizSave('${qid}',${block.data.correct||0},'${esc(block.data.hint||'')}','${currentStudent.login}','${block.id}')">Проверить</button><div class="quiz-result" id="${qid}-result"></div></div>`; }
+  else if(block.type==='callout') div.innerHTML=`<div class="callout-block">${(block.data.text||'').replace(/\n/g,'<br>')}</div>`;
+  else if(block.type==='divider') div.innerHTML=`<hr>`;
+  else if(block.type==='file' && block.data.url) div.innerHTML=`<a class="file-download-btn" href="${block.data.url}" target="_blank">📎 ${esc(block.data.label||'Скачать')}</a>`;
+  return div;
+}
+function selectQuizOpt(qid,idx){ document.querySelectorAll(`[id^="${qid}-opt-"]`).forEach(el=>el.classList.remove('selected')); document.getElementById(`${qid}-opt-${idx}`)?.classList.add('selected'); quizSelections[qid]=idx; }
+function checkQuizSave(qid,correctIdx,hint,studentLogin,blockId){ let sel=quizSelections[qid]; let resDiv=document.getElementById(`${qid}-result`); if(sel===undefined){ resDiv.textContent='Выберите вариант'; return; }
+  let isCorrect=(sel===correctIdx); if(isCorrect) recordQuizAttempt(studentLogin,blockId,true,hint); else recordQuizAttempt(studentLogin,blockId,false,hint);
+  document.querySelectorAll(`[id^="${qid}-opt-"]`).forEach((el,i)=>{ el.classList.remove('selected','correct','wrong'); if(i===correctIdx) el.classList.add('correct'); else if(i===sel) el.classList.add('wrong'); });
+  if(isCorrect) resDiv.innerHTML=`✓ Правильно! ${hint?' '+hint:''}`; else resDiv.innerHTML=`✗ Неверно. ${hint?' Подсказка: '+hint:''}`; }
+function addHomework(){ if(currentRole!=='student'){ let data=getData(); let stu=data.students.find(s=>s.login===currentStudent.login); if(!stu) return; let title=document.getElementById('newHwTitle')?.value; let deadline=document.getElementById('newHwDeadline')?.value; if(!title||!deadline){ alert('Введите название и дедлайн'); return; } if(!stu.homework) stu.homework=[]; stu.homework.push({id:'hw'+Date.now(),title,deadline,completed:false}); setData(data); renderStudentView(); } else alert('Только репетитор может добавлять задания в кабинете ученика (при редактировании)'); }
+function markHomeworkDone(hwId){ let data=getData(); let stu=data.students.find(s=>s.login===currentStudent.login); if(stu && stu.homework){ let hw=stu.homework.find(h=>h.id===hwId); if(hw) hw.completed=true; setData(data); renderStudentView(); } }
+function ytId(url){ let m=url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/); return m?m[1]:null; }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function openGitHubModal(){ let gh=getGH()||{}; document.getElementById('gh-user').value=gh.user||''; document.getElementById('gh-repo').value=gh.repo||''; document.getElementById('gh-token').value=gh.token||''; document.getElementById('github-modal').style.display='flex'; }
+function closeGithubModal(){ document.getElementById('github-modal').style.display='none'; }
+function getGH(){ let d=localStorage.getItem('gh_config'); return d?JSON.parse(d):null; }
+function setGH(cfg){ localStorage.setItem('gh_config',JSON.stringify(cfg)); }
+function saveGitHubConfig(){ let cfg={user:document.getElementById('gh-user').value.trim(),repo:document.getElementById('gh-repo').value.trim(),token:document.getElementById('gh-token').value.trim()}; if(!cfg.user||!cfg.repo||!cfg.token){ alert('Заполните поля'); return; } setGH(cfg); closeGithubModal(); alert('Настроено'); }
+async function syncToGitHub(gh,data){ let url=`https://api.github.com/repos/${gh.user}/${gh.repo}/contents/data/students.json`; let content=btoa(unescape(encodeURIComponent(JSON.stringify(data,null,2)))); try{ let sha=''; let exist=await fetch(url,{headers:{'Authorization':'token '+gh.token}}); if(exist.ok){ let j=await exist.json(); sha=j.sha; } await fetch(url,{method:'PUT',headers:{'Authorization':'token '+gh.token,'Content-Type':'application/json'},body:JSON.stringify({message:'sync',content,sha})}); }catch(e){ console.warn(e); } }
+async function tryLoadFromGitHub(){ let gh=getGH(); if(!gh) return; try{ let url=`https://api.github.com/repos/${gh.user}/${gh.repo}/contents/data/students.json`; let res=await fetch(url,{headers:{'Authorization':'token '+gh.token}}); if(!res.ok) return; let j=await res.json(); let text=decodeURIComponent(escape(atob(j.content.replace(/\n/g,'')))); let data=JSON.parse(text); localStorage.setItem(STORAGE_KEY,JSON.stringify(data)); }catch(e){} }
+tryLoadFromGitHub();
+document.querySelectorAll('.student-tab').forEach(btn=>{ btn.onclick=()=>{ let tab=btn.dataset.tab; document.querySelectorAll('.student-tab').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); document.getElementById('student-materials').style.display=tab==='materials'?'block':'none'; document.getElementById('student-homework').style.display=tab==='homework'?'block':'none'; document.getElementById('student-stats').style.display=tab==='stats'?'block':'none'; }; });
+window.renderTutorQuizStats=renderTutorQuizStats;
+</script>
+</body>
+</html>
